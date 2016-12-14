@@ -62,20 +62,22 @@ char* getIndexPage() {
       </div>\
     </div>\
     <a href='?d=stop'>\
-      <div class='stop' src=''>\
+      <button class='stop'>\
         STOP\
-      </div>\
+      </button>\
     </a>\
+    <div>\
       <a href='?d=Fn1'>\
-        <div class='function' src=''>\
+        <button class='function'>\
           Fn1\
-        </div>\
+        </button>\
       </a>\
       <a href='?d=Fn2'>\
-        <div class='function' src=''>\
+        <button class='function'>\
           Fn2\
-        </div>\
+        </button>\
       </a>\
+    </div>\
   </div>\
   <p>Uptime: %02d:%02d:%02d</p>\
 </body>\
