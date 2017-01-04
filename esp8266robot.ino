@@ -29,9 +29,10 @@
  */
 
 #include <ESP8266WiFi.h>
-#include <WiFiClient.h>
+//#include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
+#include <WebSocketsServer.h>
 
 #include "wifi.h" // define SSID and PASSWORD
 #include "html.h"
@@ -39,14 +40,91 @@
 const char* ssid = SSID;
 const char* password = PASSWORD;
 
-ESP8266WebServer server ( 80 );
-
 const int motorA = D1;
 const int motorB = D2;
 const int dirA = D3;
 const int dirB = D4;
 const int pinRelay0 = D0;
 
+int posX = 0;
+int posY = 0;
+
+WebSocketsServer webSocket = WebSocketsServer(81);
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t lenght) {
+
+    switch(type) {
+        case WStype_DISCONNECTED:
+            Serial.printf("[%u] Disconnected!\n", num);
+            break;
+        case WStype_CONNECTED:
+            {
+                IPAddress ip = webSocket.remoteIP(num);
+                Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+
+        // send message to client
+        webSocket.sendTXT(num, "Connected");
+            }
+            break;
+        case WStype_TEXT:
+        {
+          Serial.printf("[%u] get Text: %s\n", num, payload);
+          const char* p = (const char*) payload;
+          String s( p );
+          //Serial.printf("Text : %s\n", s.substring(2).c_str());
+          int value = s.substring(2).toInt();
+          //Serial.printf("Int : %i\n", value);
+          if(s.substring(0,1)=="X")
+            posX = value;
+          if(s.substring(0,1)=="Y")
+            posY = value;
+
+          if(posX>1023)
+            posX = 1023;
+          else if(posX<-1023)
+            posX = -1023;
+//            else if (posX != 0)
+//          Serial.printf("CORRECT\n");
+          if(posY>1023)
+            posY = 1023;
+          else if(posY<-1023)
+            posY = -1023;
+//          else if (posY != 0)
+//            Serial.printf("CORRECT\n");
+
+// if Y is negative, robot is going backward, else going forward
+//          int direction = 1;
+//          if(posY<0)
+//            direction = 0;
+
+// if X is negative, motorA speed reduced, and if positive, motorB speed reduced
+          int speedL = -posX + posY;
+          int speedR = posX + posY;
+          if(speedL>1023) speedL = 1023;
+          if(speedL<-1023) speedL = -1023;
+          if(speedR>1023) speedR = 1023;
+          if(speedR<-1023) speedR = -1023;
+        
+
+          Serial.printf("Send left %i (-%i+%i), right %i (%i+%i)\n", speedL, posX, posY, speedR, posX, posY);
+
+          digitalWrite( dirA, (speedL>0) ? 1 : 0 );
+          digitalWrite( dirB, (speedR>0) ? 1 : 0 );
+          analogWrite( motorA, abs(speedL) );
+          analogWrite( motorB, abs(speedR) );
+        }
+        break;
+        case WStype_BIN:
+            Serial.printf("[%u] get binary lenght: %u\n", num, lenght);
+            hexdump(payload, lenght);
+
+            // send message to client
+            // webSocket.sendBIN(num, payload, lenght);
+            break;
+    }
+
+}
+
+ESP8266WebServer server(80);
 void handleRoot() {
   if( server.args() > 0 )
   {
@@ -90,18 +168,18 @@ void handleRoot() {
       if(server.arg(0) == "Fn1")
       {
         digitalWrite ( pinRelay0, 1);
-   Serial.println ( "pinRelay0 started" );
+        Serial.println ( "pinRelay0 started" );
       }
       if(server.arg(0) == "Fn2")
       {
         digitalWrite ( pinRelay0, 0);
-   Serial.println ( "pinRelay0 stopped" );
+        Serial.println ( "pinRelay0 stopped" );
       }
     }
     else {
     }
   }
-  
+
   int rootPageSize = 1500;
 	char temp[rootPageSize];
 	int sec = millis() / 1000;
@@ -136,11 +214,11 @@ void setup ( void ) {
   pinMode ( dirB, OUTPUT );
   pinMode ( dirB, OUTPUT );
   pinMode ( pinRelay0, OUTPUT);
-  
-	digitalWrite ( motorA, 0 );
-  digitalWrite ( motorB, 0 );
-  digitalWrite ( dirA, 0 );
-  digitalWrite ( dirB, 0 );
+
+	analogWrite ( motorA, LOW );
+  analogWrite ( motorB, LOW );
+  digitalWrite ( dirA, LOW );
+  digitalWrite ( dirB, LOW );
 	Serial.begin ( 115200 );
 	WiFi.begin ( ssid, password );
 	Serial.println ( "" );
@@ -162,14 +240,16 @@ void setup ( void ) {
 	}
 
 	server.on ( "/", handleRoot );
-	server.on ( "/inline", []() {
-		server.send ( 200, "text/plain", "this works as well" );
-	} );
 	server.onNotFound ( handleNotFound );
 	server.begin();
 	Serial.println ( "HTTP server started" );
+
+  webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
+  Serial.println ( "Websocket server started" );
 }
 
 void loop ( void ) {
 	server.handleClient();
+  webSocket.loop();
 }
