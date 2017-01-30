@@ -39,6 +39,8 @@
 
 const char* ssid = SSID;
 const char* password = PASSWORD;
+ESP8266WebServer server(80);
+html rootHtml;
 
 const int motorA = D1;
 const int motorB = D2;
@@ -124,7 +126,6 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t lenght
 
 }
 
-ESP8266WebServer server(80);
 void handleRoot() {
   if( server.args() > 0 )
   {
@@ -162,8 +163,8 @@ void handleRoot() {
       }
       if(server.arg(0) == "stop")
       {
-        digitalWrite ( motorA, 0 );
-        digitalWrite ( motorB, 0 );
+        analogWrite ( motorA, 0 );
+        analogWrite ( motorB, 0 );
       }
       if(server.arg(0) == "Fn1")
       {
@@ -180,14 +181,23 @@ void handleRoot() {
     }
   }
 
-  int rootPageSize = 1500;
-	char temp[rootPageSize];
-	int sec = millis() / 1000;
-	int min = sec / 60;
-	int hr = min / 60;
+  int rootPageSize = rootHtml.size();
+  char temp[rootPageSize];
+  int sec = millis() / 1000;
+  int min = sec / 60;
+  int hr = min / 60;
 
-	snprintf ( temp, rootPageSize,getIndexPage(),	hr, min % 60, sec % 60 );
+  Serial.print ( "HTML size ");
+  Serial.println( rootPageSize );
+	snprintf ( temp, rootPageSize, rootHtml.getIndexPage().c_str(),	hr, min % 60, sec % 60 );
 	server.send ( 200, "text/html", temp );
+}
+
+void handleScript() {
+  int PageSize = rootHtml.scriptSize();
+  char temp[PageSize];
+  snprintf (temp, PageSize, rootHtml.getJsPage().c_str());
+  server.send ( 200, "text/html", temp );
 }
 
 void handleNotFound() {
@@ -240,6 +250,7 @@ void setup ( void ) {
 	}
 
 	server.on ( "/", handleRoot );
+  server.on ( "/scripts/mouse.js", handleScript );
 	server.onNotFound ( handleNotFound );
 	server.begin();
 	Serial.println ( "HTTP server started" );

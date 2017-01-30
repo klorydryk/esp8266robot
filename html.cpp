@@ -1,9 +1,20 @@
-char* getIndexPage() {
+#include "html.h"
+
+html::html()
+{
+  htmlPage = makeHtml();
+  pageSize = htmlPage.length();
+  jsFile = makeJs();
+  jsSize = jsFile.length();
+}
+    
+String html::makeHtml()
+{
   return "<!DOCTYPE html>\
 <html lang='fr'>\
 <head>\
   <meta charset='utf-8'>\
-  <script language = 'javascript' type = 'text/javascript'>\
+  <script language = 'javascript'type = 'text/javascript'>\
   var wsUri = 'ws://192.168.1.28:81/';\
   var output;\
   function init() {\
@@ -19,68 +30,88 @@ char* getIndexPage() {
     };\
     websocket.onmessage = function(evt) {\
       console.log('RECEIVED: ' + evt.data);\
-  };\
-  websocket.onerror = function(evt) {\
-    console.log('ERROR: ' + evt.data);\
-  };\
-}\
-function changeMousePos(xPosition, yPosition) {\
-  var xPosition = (xPosition*2)-1;\
-  var yPosition = ((1-yPosition)*2)-1;\
+    };\
+    websocket.onerror = function(evt) {\
+      console.log('ERROR: ' + evt.data);\
+    };\
+  }\
+  function changeMousePos(xPosition, yPosition) {\
+    var xPosition = (xPosition*2)-1;\
+    var yPosition = ((1-yPosition)*2)-1;\
+    console.log('X: ' + xPosition);\
     console.log('Y: ' + yPosition);\
-  var messageX = parseInt(xPosition*1023);\
-  websocket.send('X:' + messageX);\
-  var messageY = parseInt(yPosition*1023  );\
-  websocket.send('Y:' + messageY);\
-}\
-window.addEventListener('load', init, false);\
-</script>\
-<style type='text/css'>\
-#contentContainer {\
-  width: 550px;\
-  height: 350px;\
-  border: 5px black solid;\
-  overflow: hidden;\
-  background-color: #F2F2F2;\
-  cursor: pointer;\
-}\
-</style>\
+\
+    var messageX = parseInt(xPosition*1023);\
+    websocket.send('X:' + messageX);\
+    var messageY = parseInt(yPosition*1023);\
+    websocket.send('Y:' + messageY);\
+  }\
+  window.addEventListener('load', init, false);\
+  </script>\
+  <style type='text/css'>\
+  #contentContainer {\
+    border-radius:50%;\
+    width: 550px;\
+    height: 550px;\
+    border: 5px black solid;\
+    overflow: hidden;\
+    background-color: #F2F2F2;\
+    cursor: pointer;\
+  }\
+  </style>\
 </head>\
 <body>\
   <h1 align='center'>radio-command</h1>\
-  <div id='contentContainer'>\
-  </div>\
-  <a href='?d=stop'>\
-    <button class='stop'>\
-      STOP\
-    </button>\
-  </a>\
-  <div>\
-    <a href='?d=Fn1'>\
-      <button class='function'>\
-        Fn1\
+  <div align='center'>\
+    <div id='contentContainer'>\
+    </div>\
+    <a href='?d=stop'>\
+      <button class='stop'>\
+        STOP\
       </button>\
     </a>\
-    <a href='?d=Fn2'>\
-      <button class='function'>\
-        Fn2\
-      </button>\
-    </a>\
+    <div>\
+      <a href='?d=Fn1'>\
+        <button class='function'>\
+          Fn1\
+        </button>\
+      </a>\
+      <a href='?d=Fn2'>\
+        <button class='function'>\
+          Fn2\
+        </button>\
+      </a>\
+    </div>\
+    <p>Uptime: %02d:%02d:%02d</p>\
   </div>\
-  <p>Uptime: %02d:%02d:%02d</p>\
-  <script>\
-  var container = document.querySelector('#contentContainer');\
-  var isMouseDown = false;\
-  container.addEventListener('mousedown', enterMouse);\
-  container.addEventListener('mouseup', leaveMouse);\
-  container.addEventListener('mousemove', getClickPosition);\
-  function enterMouse() {\
-    console.log('MOUSE: down');\
-    isMouseDown = true;\
-  }\
-  function leaveMouse() {\
-    console.log('MOUSE: up');\
-    isMouseDown = false;\
+  <script src='scripts/mouse.js'></script>\
+</body>\
+</html>";
+}
+
+
+String html::makeJs()
+{
+  return "function getPosition(el) {\
+    var xPos = 0;\
+    var yPos = 0;\
+    while (el) {\
+      if (el.tagName == 'BODY') {\
+        var xScroll = el.scrollLeft || document.documentElement.scrollLeft;\
+        var yScroll = el.scrollTop || document.documentElement.scrollTop;\
+\
+        xPos += (el.offsetLeft - xScroll + el.clientLeft);\
+        yPos += (el.offsetTop - yScroll + el.clientTop);\
+      } else {\
+        xPos += (el.offsetLeft - el.scrollLeft + el.clientLeft);\
+        yPos += (el.offsetTop - el.scrollTop + el.clientTop);\
+      }\
+      el = el.offsetParent;\
+    }\
+    return {\
+      x: xPos,\
+      y: yPos\
+    };\
   }\
   function getClickPosition(e) {\
     if(!isMouseDown)\
@@ -98,31 +129,18 @@ window.addEventListener('load', init, false);\
     return;\
     changeMousePos(xPosition/container.offsetWidth, yPosition/container.offsetHeight);\
   }\
-  // Helper function to get an element's exact position\
-  function getPosition(el) {\
-    var xPos = 0;\
-    var yPos = 0;\
-    while (el) {\
-      if (el.tagName == 'BODY') {\
-        // deal with browser quirks with body/window/document and page scroll\
-        var xScroll = el.scrollLeft || document.documentElement.scrollLeft;\
-        var yScroll = el.scrollTop || document.documentElement.scrollTop;\
-        xPos += (el.offsetLeft - xScroll + el.clientLeft);\
-        yPos += (el.offsetTop - yScroll + el.clientTop);\
-      } else {\
-        // for all other non-BODY elements\
-        xPos += (el.offsetLeft - el.scrollLeft + el.clientLeft);\
-        yPos += (el.offsetTop - el.scrollTop + el.clientTop);\
-      }\
-      el = el.offsetParent;\
-    }\
-    return {\
-      x: xPos,\
-      y: yPos\
-    };\
+  var container = document.querySelector('#contentContainer');\
+  var isMouseDown = false;\
+  container.addEventListener('mousedown', enterMouse);\
+  container.addEventListener('mouseup', leaveMouse);\
+  container.addEventListener('mousemove', getClickPosition);\
+  function enterMouse() {\
+    console.log('MOUSE: down');\
+    isMouseDown = true;\
   }\
-  </script>\
-</body>\
-</html>";
+  function leaveMouse() {\
+    console.log('MOUSE: up');\
+    isMouseDown = false;\
+  }";
 }
 
