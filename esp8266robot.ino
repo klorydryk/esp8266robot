@@ -84,19 +84,10 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t lenght
             posX = 1023;
           else if(posX<-1023)
             posX = -1023;
-//            else if (posX != 0)
-//          Serial.printf("CORRECT\n");
           if(posY>1023)
             posY = 1023;
           else if(posY<-1023)
             posY = -1023;
-//          else if (posY != 0)
-//            Serial.printf("CORRECT\n");
-
-// if Y is negative, robot is going backward, else going forward
-//          int direction = 1;
-//          if(posY<0)
-//            direction = 0;
 
 // if X is negative, motorA speed reduced, and if positive, motorB speed reduced
           int speedL = -posX + posY;
@@ -133,34 +124,6 @@ void handleRoot() {
     //Serial.println(argName_0);
     if(argName_0 == "d")
     {
-      if(server.arg(0) == "up")
-      {
-        digitalWrite ( dirA, 1 );
-        digitalWrite ( dirB, 1 );
-        digitalWrite ( motorA, 1 );
-        digitalWrite ( motorB, 1 );
-      }
-      if(server.arg(0) == "down")
-      {
-        digitalWrite ( dirA, 0 );
-        digitalWrite ( dirB, 0 );
-        digitalWrite ( motorA, 1 );
-        digitalWrite ( motorB, 1 );
-      }
-      if(server.arg(0) == "left")
-      {
-        digitalWrite ( dirA, 1 );
-        digitalWrite ( dirB, 0 );
-        digitalWrite ( motorA, 1 );
-        digitalWrite ( motorB, 1 );
-      }
-      if(server.arg(0) == "right")
-      {
-        digitalWrite ( dirA, 0 );
-        digitalWrite ( dirB, 1 );
-        digitalWrite ( motorA, 1 );
-        digitalWrite ( motorB, 1 );
-      }
       if(server.arg(0) == "stop")
       {
         analogWrite ( motorA, 0 );
